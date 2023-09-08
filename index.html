@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Table Example</title>
+  
+</head>
+<body>
+  <table id="your-table-id">
+    <thead>
+      <tr>
+        <th>Activity</th>
+        <th>Address</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Table content will be populated by JavaScript -->
+    </tbody>
+  </table>
+
+  <script>
+   const currentTimestamp = Math.floor(Date.now() / 1000);
+const apiKey = "INSERT API KEY HERE";
+const blockApiUrl = `https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp=${currentTimestamp}&closest=before&apikey=${apiKey}`;
+
+const table = document.getElementById("your-table-id");
+
+// Make the AJAX request
+const request = new XMLHttpRequest();
+request.open("GET", blockApiUrl, true);
+request.onreadystatechange = function() {
+  if (request.readyState === 4 && request.status === 200) {
+    const response = JSON.parse(request.responseText);
+    const latestBlockNumber = response.result;
+
+    const apiUrl = `https://api.etherscan.io/api?module=account&action=tokentx&contractaddress=0xc14B4d4CA66f40F352d7a50fd230EF8b2Fb3b8d4&page=1&offset=100&startblock=0&endblock=${latestBlockNumber}&sort=desc&apikey=${apiKey}`;
+
+    // Make the second AJAX request
+    const innerRequest = new XMLHttpRequest();
+    innerRequest.open("GET", apiUrl, true);
+    innerRequest.onreadystatechange = function() {
+      if (innerRequest.readyState === 4 && innerRequest.status === 200) {
+        const innerResponse = JSON.parse(innerRequest.responseText);
+        const transactions = innerResponse.result;
+
+        // Loop through the latest 10 transactions and populate the table
+for (let i = 0; i < 20 && i < transactions.length; i++) {
+  const transaction = transactions[i];
+
+  let activity, address, amount, txHash;
+
+  if (transaction.from.toLowerCase() === "0xdae6d9662c4904026ac311a5fdc8917fdc51971a") {
+    activity = "BOUGHT";
+    address = transaction.to;
+    amount = (parseInt(transaction.value) / 1e18).toFixed(4);
+  } else if (transaction.to.toLowerCase() === "0xdae6d9662c4904026ac311a5fdc8917fdc51971a") {
+    activity = "SOLD";
+    address = transaction.from;
+    amount = (parseInt(transaction.value) / 1e18).toFixed(4);
+  } else if (transaction.to.toLowerCase() === "0xc14b4d4ca66f40f352d7a50fd230ef8b2fb3b8d4") {
+    activity = "TAX";
+    address = transaction.from;
+    amount = (parseInt(transaction.value) / 1e18).toFixed(4);
+  } else {
+    continue; // Skip transactions that don't meet the conditions
+  }
+
+  // Get the transaction hash
+  txHash = transaction.hash;
+
+  const row = table.insertRow();
+  const activityCell = row.insertCell();
+  const addressCell = row.insertCell();
+  const amountCell = row.insertCell();
+
+  activityCell.textContent = activity;
+  addressCell.innerHTML = `<a href="https://etherscan.io/tx/${txHash}" target="_blank" style="text-decoration: none;">${address}</a>`;
+  amountCell.textContent = amount;
+}
+      }
+    };
+    innerRequest.send();
+  }
+};
+request.send();
+  </script>
+</body>
+</html>
